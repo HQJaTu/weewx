@@ -1,0 +1,20 @@
+[Unit]
+Description=WeeWX weather station system
+After=syslog.target network.target
+
+[Service]
+Type=exec
+PrivateTmp=yes
+User=root
+Group=root
+
+Environment=CONF_FILE=/etc/weewx/weewx.conf
+Environment=WEEWX_BINDIR=/usr/share/weewx
+Environment=WEEWX_PYTHON=/usr/bin/python
+
+ExecStartPre=/usr/bin/test -f "${CONF_FILE}"
+ExecStart=/usr/bin/python "${WEEWX_BINDIR}/weewxd" --config "${CONF_FILE}"
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
