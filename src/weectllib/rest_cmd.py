@@ -59,6 +59,12 @@ def add_subparser(subparsers):
                                  metavar='FILENAME',
                                  help=f'Path to configuration file. '
                                       f'Default is "{weecfg.default_config_path}".')
+    run_rest_parser.add_argument('--discovery',
+                                 action='store_true',
+                                 help="Publish discovery/announcement messages instead of "
+                                      "uploading data, for services that support it (e.g. "
+                                      "Home Assistant discovery for MQTT). Services without "
+                                      "discovery support are skipped.")
     run_rest_parser.add_argument('services',
                                  nargs="*",
                                  metavar='NAME',
@@ -74,4 +80,5 @@ def list_rest(config_dict, _):
 
 
 def run_rest(config_dict, namespace):
-    weectllib.rest_actions.run_rest(config_dict, services=namespace.services)
+    weectllib.rest_actions.run_rest(config_dict, services=namespace.services,
+                                    discovery=namespace.discovery)

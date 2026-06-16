@@ -38,6 +38,7 @@ AWEKAS                  N      weewx.restx.StdAWEKAS
 
     weectl rest run [NAME ...]
         [--config=FILENAME]
+        [--discovery]
 
 In normal operation, WeeWX uploads to a RESTful service only when a new archive
 record arrives, and only as often as the service's posting schedule allows. The
@@ -69,6 +70,16 @@ enabled, it will be skipped with a notice.
 ### --config
 
 Path to the configuration file. Default is `~/weewx-data/weewx.conf`.
+
+### --discovery
+
+Publish discovery/announcement messages instead of uploading data, for services
+that support it. For example, the MQTT uploader uses this to publish Home
+Assistant MQTT discovery messages, so that WeeWX's sensors appear in Home
+Assistant automatically. Services that do not support discovery are skipped.
+
+    # Publish Home Assistant discovery for the MQTT service:
+    weectl rest run MQTT --discovery
 
 ### --help
 

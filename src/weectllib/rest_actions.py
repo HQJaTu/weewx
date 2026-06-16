@@ -46,13 +46,15 @@ def list_rest(config_dict):
         engine.shutDown()
 
 
-def run_rest(config_dict, services=None):
+def run_rest(config_dict, services=None, discovery=False):
     """Force an upload to one or more RESTful services.
 
     Args:
         config_dict (dict): The configuration dictionary.
         services (list[str]|None): The names of the services to upload to. If None or
             empty, all enabled RESTful services will be uploaded to.
+        discovery (bool): If True, publish discovery/announcement messages (for services
+            that support it, e.g. MQTT Home Assistant discovery) instead of uploading data.
     """
 
     # Use a sane default socket timeout, the same as 'weectl report run' does.
@@ -104,13 +106,20 @@ def run_rest(config_dict, services=None):
             print("No archive record is available to upload.", file=sys.stderr)
             return
 
-        print(f"Uploading record for {timestamp_to_string(record['dateTime'])}")
+        if discovery:
+            print(f"Publishing discovery messages "
+                  f"(record {timestamp_to_string(record['dateTime'])})")
+        else:
+            print(f"Uploading record for {timestamp_to_string(record['dateTime'])}")
 
         for svc_path, name, inst in selected:
             if not _is_enabled(inst):
                 print(f"{name}: not enabled; skipping.")
                 continue
-            _force_post(name, inst, record)
+            if discovery:
+                _publish_discovery(name, inst, record)
+            else:
+                _force_post(name, inst, record)
     finally:
         engine.shutDown()
 
@@ -195,3 +204,26 @@ def _force_post(name, inst, record):
         log.error("rest run: unexpected error posting to %s: %s", name, e)
     else:
         print(f"{name}: upload successful.")
+
+
+def _publish_discovery(name, inst, record):
+    """Ask a service to publish its discovery/announcement messages, if it supports it.
+
+    A service opts in by giving its posting thread a callable 'publish_ha_discovery'
+    method (duck-typed, so weectl stays generic). Services without it are skipped.
+    """
+    thread = inst.archive_thread
+    publish = getattr(thread, 'publish_ha_discovery', None)
+    if not callable(publish):
+        print(f"{name}: does not support discovery; skipping.")
+        return
+
+    try:
+        publish(record)
+    except weewx.restx.FailedPost as e:
+        print(f"{name}: discovery FAILED: {e}", file=sys.stderr)
+    except Exception as e:
+        print(f"{name}: discovery error: {e}", file=sys.stderr)
+        log.error("rest run: unexpected error publishing discovery for %s: %s", name, e)
+    else:
+        print(f"{name}: discovery published.")
